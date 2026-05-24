@@ -1,0 +1,65 @@
+{
+  "name": "vite-plugin-mithril-jsx",
+  "version": "1.0.0",
+  "description": "Vite plugin that configures JSX for Mithril.js — works with all Vite versions (esbuild ≤ 5, rolldown/OXC 7+).",
+  "keywords": [
+    "vite",
+    "vite-plugin",
+    "mithril",
+    "mithriljs",
+    "jsx",
+    "rolldown",
+    "oxc",
+    "esbuild"
+  ],
+  "author": "Dominic Jean <dominic.jean@dejy.info>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DeJy/vite-plugin-mithril-jsx.git"
+  },
+  "homepage": "https://github.com/DeJy/vite-plugin-mithril-jsx#readme",
+  "bugs": {
+    "url": "https://github.com/DeJy/vite-plugin-mithril-jsx/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "vite": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": false
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.0",
+    "vite": "^8.0.0"
+  }
+}
