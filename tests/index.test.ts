@@ -5,6 +5,11 @@ import mithrilJsx, { buildConfig } from '../src/index';
 
 const JS_EXT_FILTER = /\.[jt]sx?$/;
 
+/** The define block expected for a given pragmaFrag. */
+function expectedDefineConfig(pragmaFrag: string) {
+  return { define: { [pragmaFrag]: JSON.stringify('[') } };
+}
+
 /** The rolldown/OXC config expected for a given pragma pair. */
 function expectedRolldownConfig(
   pragma: string,
@@ -12,6 +17,7 @@ function expectedRolldownConfig(
   jsExtensions = false,
 ) {
   return {
+    ...expectedDefineConfig(pragmaFrag),
     oxc: {
       ...(jsExtensions ? { include: JS_EXT_FILTER } : {}),
       jsx: { runtime: 'classic', pragma, pragmaFrag, development: false },
@@ -36,6 +42,7 @@ function expectedEsbuildConfig(
   jsExtensions = false,
 ) {
   return {
+    ...expectedDefineConfig(pragmaFrag),
     esbuild: {
       ...(jsExtensions ? { include: JS_EXT_FILTER } : {}),
       jsxFactory: pragma,
@@ -100,6 +107,7 @@ describe('buildConfig', () => {
 
     it('uses default pragma / pragmaFrag everywhere', () => {
       expect(buildConfig(6)).toEqual({
+        ...expectedDefineConfig('mFrag'),
         ...expectedEsbuildConfig('m', 'mFrag'),
         ...expectedRolldownConfig('m', 'mFrag'),
       });

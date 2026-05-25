@@ -44,7 +44,7 @@ mithrilJsx({
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `pragma` | `string` | `'m'` | JSX factory — must be a global or import available in every JSX file |
-| `pragmaFrag` | `string` | `'mFrag'` | JSX fragment factory — must resolve to Mithril's `'['` selector at runtime |
+| `pragmaFrag` | `string` | `'mFrag'` | JSX fragment identifier — automatically resolved to `'['` by the plugin via `define` |
 | `jsExtensions` | `boolean` | `false` | When `true`, enables JSX parsing in `.js` and `.ts` files in addition to `.jsx` / `.tsx` |
 
 #### `jsExtensions`
@@ -62,21 +62,24 @@ The plugin configures the right option per Vite version automatically:
 
 ## Prerequisites
 
-The pragma names must be available as **globals** at runtime. Add this to your entry point (e.g. `main.js`):
+The JSX factory (`m`) must be available in every file that uses JSX — either as an import or a global:
 
 ```js
+// Option A — import in each file (recommended)
 import m from 'mithril';
 
-globalThis.m     = m;
-globalThis.mFrag = '['; // Mithril uses the CSS selector '[' as a fragment
+// Option B — set once in your entry point
+import m from 'mithril';
+globalThis.m = m;
 ```
 
-> **Why `'['`?** Mithril's hyperscript function `m(selector, ...)` accepts CSS selectors as the first argument. `'['` selects `<div>` with no attributes — it is the idiomatic Mithril fragment.
+> **Fragment setup is automatic.** The plugin injects `define: { mFrag: '"["' }` into the Vite config, so `mFrag` resolves to Mithril's `'['` fragment selector at compile time. No entry-file boilerplate needed.
 
 ## Example
 
 ```jsx
-// No import needed — m and mFrag are globals
+import m from 'mithril';
+
 export default function HelloWorld() {
   return (
     <>

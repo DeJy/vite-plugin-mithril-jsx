@@ -16,14 +16,9 @@ export interface MithrilJsxOptions {
 
   /**
    * JSX fragment factory name.
-   * Must resolve to Mithril's fragment selector `'['` at runtime.
+   * The plugin automatically maps this identifier to Mithril's fragment
+   * selector `'['` via Vite's `define` — no entry-file setup required.
    *
-   * Typical setup in your entry point:
-   * ```js
-   * import m from 'mithril';
-   * globalThis.m     = m;
-   * globalThis.mFrag = '[';
-   * ```
    * @default 'mFrag'
    */
   pragmaFrag?: string;
@@ -59,6 +54,12 @@ export function buildConfig(
   options: MithrilJsxOptions = {},
 ): UserConfig {
   const { pragma = 'm', pragmaFrag = 'mFrag', jsExtensions = false } = options;
+
+  // Resolve the fragment identifier to Mithril's '[' at compile time.
+  // This means users never need `globalThis.mFrag = '['` in their entry file.
+  const defineConfig: UserConfig = {
+    define: { [pragmaFrag]: JSON.stringify('[') },
+  };
 
   // ── Rolldown / OXC (Vite 7+, and Vite 6 with experimental rolldown) ────
   const rolldownConfig: UserConfig = {
@@ -106,9 +107,9 @@ export function buildConfig(
     },
   };
 
-  if (viteMajor >= 7) return rolldownConfig;
-  if (viteMajor === 6) return { ...esbuildConfig, ...rolldownConfig };
-  return esbuildConfig; // Vite ≤ 5
+  if (viteMajor >= 7) return { ...defineConfig, ...rolldownConfig };
+  if (viteMajor === 6) return { ...defineConfig, ...esbuildConfig, ...rolldownConfig };
+  return { ...defineConfig, ...esbuildConfig }; // Vite ≤ 5
 }
 
 /**
