@@ -7,4 +7,5 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   external: ['vite'],
+  tsconfig: 'tsconfig.build.json',
 });

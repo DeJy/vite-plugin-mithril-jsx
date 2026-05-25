@@ -49,6 +49,69 @@ export interface MithrilJsxOptions {
 const JS_EXTENSIONS_FILTER = /\.[jt]sx?$/;
 
 /**
+ * Builds the Vite `UserConfig` fragment for the given Vite major version and
+ * plugin options. Exported for testing; not part of the public API.
+ *
+ * @internal
+ */
+export function buildConfig(
+  viteMajor: number,
+  options: MithrilJsxOptions = {},
+): UserConfig {
+  const { pragma = 'm', pragmaFrag = 'mFrag', jsExtensions = false } = options;
+
+  // ── Rolldown / OXC (Vite 7+, and Vite 6 with experimental rolldown) ────
+  const rolldownConfig: UserConfig = {
+    // Top-level OXC transformer config (Vite 7+)
+    // NOTE: development must stay false even in dev mode.
+    // With runtime:'classic', development:true makes OXC inject __self and
+    // __source props into every m() call. Mithril treats these as DOM
+    // attributes and tries to JSON.stringify(__self) → circular reference.
+    oxc: {
+      // When jsExtensions is true, tell OXC to parse .js/.ts as JSX too.
+      ...(jsExtensions ? { include: JS_EXTENSIONS_FILTER } : {}),
+      jsx: {
+        runtime: 'classic',
+        pragma,
+        pragmaFrag,
+        development: false,
+      },
+    },
+    // Pre-bundler (optimizeDeps) uses its own rolldown pipeline
+    optimizeDeps: {
+      rolldownOptions: {
+        // When jsExtensions is true, tell rolldown to treat .js as jsx and
+        // .ts as tsx so the pre-bundler also parses JSX in those files.
+        ...(jsExtensions
+          ? { moduleTypes: { '.js': 'jsx', '.ts': 'tsx' } }
+          : {}),
+        transform: {
+          jsx: {
+            runtime: 'classic',
+            pragma,
+            pragmaFrag,
+          },
+        },
+      },
+    },
+  };
+
+  // ── esbuild (Vite ≤ 5, and Vite 6 without experimental rolldown) ────────
+  const esbuildConfig: UserConfig = {
+    esbuild: {
+      // When jsExtensions is true, tell esbuild to parse .js/.ts as JSX too.
+      ...(jsExtensions ? { include: JS_EXTENSIONS_FILTER } : {}),
+      jsxFactory: pragma,
+      jsxFragment: pragmaFrag,
+    },
+  };
+
+  if (viteMajor >= 7) return rolldownConfig;
+  if (viteMajor === 6) return { ...esbuildConfig, ...rolldownConfig };
+  return esbuildConfig; // Vite ≤ 5
+}
+
+/**
  * Vite plugin that configures JSX for Mithril.js.
  *
  * Automatically adapts to the transformer used by the installed Vite version:
@@ -70,61 +133,10 @@ const JS_EXTENSIONS_FILTER = /\.[jt]sx?$/;
  * ```
  */
 export default function mithrilJsx(options: MithrilJsxOptions = {}): Plugin {
-  const { pragma = 'm', pragmaFrag = 'mFrag', jsExtensions = false } = options;
-
   return {
     name: 'vite-plugin-mithril-jsx',
-
-    config(_userConfig: UserConfig): UserConfig {
-      // ── Rolldown / OXC (Vite 7+, and Vite 6 with experimental rolldown) ──
-      const rolldownConfig: UserConfig = {
-        // Top-level OXC transformer config (Vite 7+)
-        // NOTE: development must stay false even in dev mode.
-        // With runtime:'classic', development:true makes OXC inject __self and
-        // __source props into every m() call. Mithril treats these as DOM
-        // attributes and tries to JSON.stringify(__self) → circular reference.
-        oxc: {
-          // When jsExtensions is true, tell OXC to parse .js/.ts as JSX too.
-          ...(jsExtensions ? { include: JS_EXTENSIONS_FILTER } : {}),
-          jsx: {
-            runtime: 'classic',
-            pragma,
-            pragmaFrag,
-            development: false,
-          },
-        },
-        // Pre-bundler (optimizeDeps) uses its own rolldown pipeline
-        optimizeDeps: {
-          rolldownOptions: {
-            // When jsExtensions is true, tell rolldown to treat .js as jsx and
-            // .ts as tsx so the pre-bundler also parses JSX in those files.
-            ...(jsExtensions
-              ? { moduleTypes: { '.js': 'jsx', '.ts': 'tsx' } }
-              : {}),
-            transform: {
-              jsx: {
-                runtime: 'classic',
-                pragma,
-                pragmaFrag,
-              },
-            },
-          },
-        },
-      };
-
-      // ── esbuild (Vite ≤ 5, and Vite 6 without experimental rolldown) ──────
-      const esbuildConfig: UserConfig = {
-        esbuild: {
-          // When jsExtensions is true, tell esbuild to parse .js/.ts as JSX too.
-          ...(jsExtensions ? { include: JS_EXTENSIONS_FILTER } : {}),
-          jsxFactory: pragma,
-          jsxFragment: pragmaFrag,
-        },
-      };
-
-      if (VITE_MAJOR >= 7) return rolldownConfig;
-      if (VITE_MAJOR === 6) return { ...esbuildConfig, ...rolldownConfig };
-      return esbuildConfig; // Vite ≤ 5
+    config(): UserConfig {
+      return buildConfig(VITE_MAJOR, options);
     },
   };
 }
