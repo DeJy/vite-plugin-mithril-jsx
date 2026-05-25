@@ -27,7 +27,26 @@ export interface MithrilJsxOptions {
    * @default 'mFrag'
    */
   pragmaFrag?: string;
+
+  /**
+   * Enable JSX parsing in plain `.js` and `.ts` files (not just `.jsx` / `.tsx`).
+   *
+   * By default, transformers (esbuild and OXC) only process JSX syntax in files
+   * whose extension explicitly signals JSX (`.jsx`, `.tsx`). Set this to `true`
+   * if your project uses `.js` files that contain JSX.
+   *
+   * Configures the right option per Vite version:
+   * - Vite ≤ 6 (esbuild): sets `esbuild.include` to `/\.[jt]sx?$/`
+   * - Vite 7+ (OXC): sets `oxc.include` to `/\.[jt]sx?$/`
+   * - Pre-bundler (rolldown, Vite 6+): sets `moduleTypes` so `.js`→`jsx` and `.ts`→`tsx`
+   *
+   * @default false
+   */
+  jsExtensions?: boolean;
 }
+
+/** Matches .js, .ts, .jsx, .tsx — used when jsExtensions is true. */
+const JS_EXTENSIONS_FILTER = /\.[jt]sx?$/;
 
 /**
  * Vite plugin that configures JSX for Mithril.js.
@@ -51,7 +70,7 @@ export interface MithrilJsxOptions {
  * ```
  */
 export default function mithrilJsx(options: MithrilJsxOptions = {}): Plugin {
-  const { pragma = 'm', pragmaFrag = 'mFrag' } = options;
+  const { pragma = 'm', pragmaFrag = 'mFrag', jsExtensions = false } = options;
 
   return {
     name: 'vite-plugin-mithril-jsx',
@@ -65,6 +84,8 @@ export default function mithrilJsx(options: MithrilJsxOptions = {}): Plugin {
         // __source props into every m() call. Mithril treats these as DOM
         // attributes and tries to JSON.stringify(__self) → circular reference.
         oxc: {
+          // When jsExtensions is true, tell OXC to parse .js/.ts as JSX too.
+          ...(jsExtensions ? { include: JS_EXTENSIONS_FILTER } : {}),
           jsx: {
             runtime: 'classic',
             pragma,
@@ -75,6 +96,11 @@ export default function mithrilJsx(options: MithrilJsxOptions = {}): Plugin {
         // Pre-bundler (optimizeDeps) uses its own rolldown pipeline
         optimizeDeps: {
           rolldownOptions: {
+            // When jsExtensions is true, tell rolldown to treat .js as jsx and
+            // .ts as tsx so the pre-bundler also parses JSX in those files.
+            ...(jsExtensions
+              ? { moduleTypes: { '.js': 'jsx', '.ts': 'tsx' } }
+              : {}),
             transform: {
               jsx: {
                 runtime: 'classic',
@@ -89,6 +115,8 @@ export default function mithrilJsx(options: MithrilJsxOptions = {}): Plugin {
       // ── esbuild (Vite ≤ 5, and Vite 6 without experimental rolldown) ──────
       const esbuildConfig: UserConfig = {
         esbuild: {
+          // When jsExtensions is true, tell esbuild to parse .js/.ts as JSX too.
+          ...(jsExtensions ? { include: JS_EXTENSIONS_FILTER } : {}),
           jsxFactory: pragma,
           jsxFragment: pragmaFrag,
         },

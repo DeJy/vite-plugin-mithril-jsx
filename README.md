@@ -35,8 +35,9 @@ That's it. No `esbuild`, `oxc`, or `optimizeDeps` blocks needed — the plugin i
 
 ```ts
 mithrilJsx({
-  pragma:     'm',     // JSX factory   (default: 'm')
-  pragmaFrag: 'mFrag', // JSX fragment  (default: 'mFrag')
+  pragma:       'm',     // JSX factory   (default: 'm')
+  pragmaFrag:   'mFrag', // JSX fragment  (default: 'mFrag')
+  jsExtensions: true,    // parse JSX in .js / .ts files (default: false)
 })
 ```
 
@@ -44,6 +45,20 @@ mithrilJsx({
 |---|---|---|---|
 | `pragma` | `string` | `'m'` | JSX factory — must be a global or import available in every JSX file |
 | `pragmaFrag` | `string` | `'mFrag'` | JSX fragment factory — must resolve to Mithril's `'['` selector at runtime |
+| `jsExtensions` | `boolean` | `false` | When `true`, enables JSX parsing in `.js` and `.ts` files in addition to `.jsx` / `.tsx` |
+
+#### `jsExtensions`
+
+By default, transformers only parse JSX in files whose extension signals it (`.jsx`, `.tsx`).
+Set `jsExtensions: true` if your project uses plain `.js` files that contain JSX syntax.
+
+The plugin configures the right option per Vite version automatically:
+
+| Vite | What gets set |
+|---|---|
+| ≤ 6 (esbuild) | `esbuild.include: /\.[jt]sx?$/` |
+| 7+ (OXC) | `oxc.include: /\.[jt]sx?$/` |
+| 6+ (rolldown pre-bundler) | `optimizeDeps.rolldownOptions.moduleTypes: { '.js': 'jsx', '.ts': 'tsx' }` |
 
 ## Prerequisites
 
