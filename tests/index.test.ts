@@ -249,8 +249,35 @@ describe('mithrilJsx (plugin)', () => {
     expect(mithrilJsx().name).toBe('vite-plugin-mithril-jsx');
   });
 
+  it('has enforce: "pre" so the transform runs before vite:build-import-analysis', () => {
+    expect(mithrilJsx().enforce).toBe('pre');
+  });
+
   it('exposes a config hook', () => {
     expect(typeof mithrilJsx().config).toBe('function');
+  });
+
+  it('exposes a transform hook', () => {
+    expect(typeof mithrilJsx().transform).toBe('function');
+  });
+
+  it('transform hook returns null when jsExtensions is false', async () => {
+    const plugin = mithrilJsx({ jsExtensions: false });
+    const transform = plugin.transform as (code: string, id: string) => Promise<unknown>;
+    expect(await transform('<div/>', '/src/foo.js')).toBeNull();
+  });
+
+  it('transform hook skips .jsx and .tsx files even when jsExtensions is true', async () => {
+    const plugin = mithrilJsx({ jsExtensions: true });
+    const transform = plugin.transform as (code: string, id: string) => Promise<unknown>;
+    expect(await transform('<div/>', '/src/foo.jsx')).toBeNull();
+    expect(await transform('<div/>', '/src/foo.tsx')).toBeNull();
+  });
+
+  it('transform hook skips files without JSX (no "<")', async () => {
+    const plugin = mithrilJsx({ jsExtensions: true });
+    const transform = plugin.transform as (code: string, id: string) => Promise<unknown>;
+    expect(await transform('export const x = 1', '/src/foo.js')).toBeNull();
   });
 
   it('config hook returns an object (smoke test against installed Vite)', () => {

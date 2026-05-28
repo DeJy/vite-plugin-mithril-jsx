@@ -159,10 +159,50 @@ export function buildConfig(
  * ```
  */
 export default function mithrilJsx(options: MithrilJsxOptions = {}): Plugin {
+  const { pragma = 'm', pragmaFrag = 'mFrag', jsExtensions = false } = options;
+
   return {
     name: 'vite-plugin-mithril-jsx',
+    // enforce:'pre' ensures our transform runs before vite:build-import-analysis
+    // (which uses acorn and cannot parse JSX syntax).
+    enforce: 'pre',
     config(): UserConfig {
       return buildConfig(VITE_MAJOR, options);
+    },
+    // When jsExtensions is true, Vite's built-in transform plugins (esbuild / OXC)
+    // do not convert JSX in .js/.ts files early enough — vite:build-import-analysis
+    // (acorn) sees the raw JSX first and throws. This enforce:'pre' hook runs before
+    // all core Vite plugins and converts JSX to plain function calls so that acorn
+    // never encounters JSX syntax.
+    async transform(code: string, id: string) {
+      if (!jsExtensions) return null;
+      if (id.startsWith('\0')) return null;
+      const filePath = id.split('?')[0];
+      // Only intercept .js and .ts — .jsx/.tsx are handled by Vite's built-ins.
+      if (!/\.[jt]s$/.test(filePath)) return null;
+      // Fast bail-out: JSX always contains '<'.
+      if (!code.includes('<')) return null;
+
+      // 'jsx' for .js, 'tsx' for .ts — enables JSX parsing in each language.
+      const lang = (filePath.endsWith('.ts') ? 'tsx' : 'jsx') as 'tsx' | 'jsx';
+
+      if (VITE_MAJOR >= 7) {
+        const { transformWithOxc } = await import('vite');
+        const result = await transformWithOxc(code, id, {
+          lang,
+          // development must stay false — see critical constraint note in buildConfig.
+          jsx: { runtime: 'classic', pragma, pragmaFrag, development: false },
+        });
+        return { code: result.code, map: result.map };
+      }
+
+      const { transformWithEsbuild } = await import('vite');
+      const result = await transformWithEsbuild(code, id, {
+        loader: lang,
+        jsxFactory: pragma,
+        jsxFragment: pragmaFrag,
+      });
+      return { code: result.code, map: result.map };
     },
   };
 }
