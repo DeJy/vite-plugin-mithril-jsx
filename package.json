@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-mithril-jsx",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Vite plugin that configures JSX for Mithril.js — works with all Vite versions (esbuild ≤ 5, rolldown/OXC 7+).",
   "keywords": [
     "vite",
