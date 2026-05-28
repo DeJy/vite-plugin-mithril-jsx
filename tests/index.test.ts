@@ -48,6 +48,15 @@ function expectedEsbuildConfig(
       jsxFactory: pragma,
       jsxFragment: pragmaFrag,
     },
+    ...(jsExtensions
+      ? {
+          optimizeDeps: {
+            esbuildOptions: {
+              loader: { '.js': 'jsx', '.ts': 'tsx' },
+            },
+          },
+        }
+      : {}),
   };
 }
 
@@ -79,14 +88,19 @@ describe('buildConfig', () => {
       );
     });
 
-    it('jsExtensions: false (default) — no include in esbuild', () => {
+    it('jsExtensions: false (default) — no include or optimizeDeps', () => {
       const cfg = buildConfig(5, { jsExtensions: false });
       expect(cfg.esbuild).not.toHaveProperty('include');
+      expect(cfg).not.toHaveProperty('optimizeDeps');
     });
 
-    it('jsExtensions: true — adds include to esbuild', () => {
+    it('jsExtensions: true — adds include to esbuild and loader to optimizeDeps.esbuildOptions', () => {
       const cfg = buildConfig(5, { jsExtensions: true });
       expect(cfg.esbuild).toHaveProperty('include', JS_EXT_FILTER);
+      expect(cfg.optimizeDeps?.esbuildOptions).toHaveProperty('loader', {
+        '.js': 'jsx',
+        '.ts': 'tsx',
+      });
     });
 
     it('jsExtensions: true — still carries pragma values', () => {
@@ -121,18 +135,23 @@ describe('buildConfig', () => {
       });
     });
 
-    it('jsExtensions: false — no include or moduleTypes anywhere', () => {
+    it('jsExtensions: false — no include, moduleTypes, or esbuildOptions anywhere', () => {
       const cfg = buildConfig(6, { jsExtensions: false });
       expect(cfg.esbuild).not.toHaveProperty('include');
       expect(cfg.oxc).not.toHaveProperty('include');
       expect(cfg.optimizeDeps?.rolldownOptions).not.toHaveProperty('moduleTypes');
+      expect(cfg.optimizeDeps).not.toHaveProperty('esbuildOptions');
     });
 
-    it('jsExtensions: true — adds include to esbuild and oxc, moduleTypes to rolldown', () => {
+    it('jsExtensions: true — adds include to esbuild and oxc, moduleTypes to rolldown, loader to esbuildOptions', () => {
       const cfg = buildConfig(6, { jsExtensions: true });
       expect(cfg.esbuild).toHaveProperty('include', JS_EXT_FILTER);
       expect(cfg.oxc).toHaveProperty('include', JS_EXT_FILTER);
       expect(cfg.optimizeDeps?.rolldownOptions).toHaveProperty('moduleTypes', {
+        '.js': 'jsx',
+        '.ts': 'tsx',
+      });
+      expect(cfg.optimizeDeps?.esbuildOptions).toHaveProperty('loader', {
         '.js': 'jsx',
         '.ts': 'tsx',
       });

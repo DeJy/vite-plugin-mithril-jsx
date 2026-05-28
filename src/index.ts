@@ -33,7 +33,8 @@ export interface MithrilJsxOptions {
    * Configures the right option per Vite version:
    * - Vite ≤ 6 (esbuild): sets `esbuild.include` to `/\.[jt]sx?$/`
    * - Vite 7+ (OXC): sets `oxc.include` to `/\.[jt]sx?$/`
-   * - Pre-bundler (rolldown, Vite 6+): sets `moduleTypes` so `.js`→`jsx` and `.ts`→`tsx`
+   * - Pre-bundler (esbuild, Vite ≤ 6 default): sets `optimizeDeps.esbuildOptions.loader`
+   * - Pre-bundler (rolldown, Vite 6+ experimental / Vite 7+): sets `moduleTypes`
    *
    * @default false
    */
@@ -105,10 +106,34 @@ export function buildConfig(
       jsxFactory: pragma,
       jsxFragment: pragmaFrag,
     },
+    // When jsExtensions is true, configure the esbuild pre-bundler (Vite ≤ 6
+    // default) to also treat .js/.ts files as JSX source.
+    ...(jsExtensions
+      ? {
+          optimizeDeps: {
+            esbuildOptions: {
+              loader: { '.js': 'jsx', '.ts': 'tsx' },
+            },
+          },
+        }
+      : {}),
   };
 
   if (viteMajor >= 7) return { ...defineConfig, ...rolldownConfig };
-  if (viteMajor === 6) return { ...defineConfig, ...esbuildConfig, ...rolldownConfig };
+  if (viteMajor === 6) {
+    // Vite 6 can use either the default esbuild pre-bundler or the experimental
+    // rolldown pre-bundler. Provide config for both and merge optimizeDeps so
+    // neither esbuildOptions nor rolldownOptions is silently dropped.
+    return {
+      ...defineConfig,
+      ...esbuildConfig,
+      ...rolldownConfig,
+      optimizeDeps: {
+        ...esbuildConfig.optimizeDeps,
+        ...rolldownConfig.optimizeDeps,
+      },
+    };
+  }
   return { ...defineConfig, ...esbuildConfig }; // Vite ≤ 5
 }
 
